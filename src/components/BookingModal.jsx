@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { Upload, X, AlertCircle, UserCheck } from 'lucide-react';
 import { ticketsService } from '../services/ticketsService';
 
-export default function ReservaModal({ isOpen, funcion, userId, onClose, onReservaExitosa }) {
+export default function BookingModal({ isOpen, movie, userId, onClose, onSuccessBooking }) { //isOpen, funcion, userId, onClose, onReservaExitosa
   const [file, setFile] = useState(null);
-  const [solicitarMiembro, setSolicitarMiembro] = useState(false);
+  const [getMember, setGetMember] = useState(false); //solicitarMiembro, setSolicitarMiembro
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  if (!isOpen || !funcion) return null;
+  if (!isOpen || !movie) return null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,14 +21,14 @@ export default function ReservaModal({ isOpen, funcion, userId, onClose, onReser
     setErrorMsg('');
 
     try {
-      const nuevaBoleta = await ticketsService.reservarBoleta({
-        funcionId: funcion.id,
+      const newTicket = await ticketsService.bookingTicket({
+        movieId: movie.id,
         userId,
-        fileComprobante: file,
-        solicitarMiembro
+        fileVoucher: file,
+        getMember
       });
 
-      onReservaExitosa(nuevaBoleta);
+      onSuccessBooking(newTicket);
       onClose();
     } catch (err) {
       console.error(err);
@@ -50,7 +50,7 @@ export default function ReservaModal({ isOpen, funcion, userId, onClose, onReser
 
         <div>
           <h3 className="text-xl font-bold text-white">Reservar Silla</h3>
-          <p className="text-xs text-slate-400 mt-1">Función: <strong className="text-slate-200">{funcion.titulo}</strong></p>
+          <p className="text-xs text-slate-400 mt-1">Función: <strong className="text-slate-200">{movie.title}</strong></p>
         </div>
 
         {errorMsg && (
@@ -88,8 +88,8 @@ export default function ReservaModal({ isOpen, funcion, userId, onClose, onReser
             <input 
               type="checkbox" 
               id="chk-miembro"
-              checked={solicitarMiembro}
-              onChange={(e) => setSolicitarMiembro(e.target.checked)}
+              checked={getMember}
+              onChange={(e) => setGetMember(e.target.checked)}
               className="mt-0.5 rounded accent-rose-600 w-4 h-4 cursor-pointer"
             />
             <label htmlFor="chk-miembro" className="text-xs text-slate-300 cursor-pointer leading-tight">

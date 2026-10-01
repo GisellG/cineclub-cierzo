@@ -3,10 +3,15 @@ import { Film, LogOut } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 import LoginModal from './components/LoginModal';
 import ScreeningModal from './components/ScreeningModal';
+import BookingModal from './components/BookingModal';
 
 export default function App() {
   const [session, setSession] = useState(null);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+
+  // State for the booking
+  const [isBookingOpen, setisBookingOpen] = useState(false); //isReserva
+  const [movieSelected, setMovieSelected] = useState(null); //funcionSeleccionada
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -24,13 +29,21 @@ export default function App() {
     await supabase.auth.signOut();
   };
 
+  const handleBookingClick = (movie) => {
+    if (!session) {
+      setIsLoginOpen(true);
+    } else {
+      setMovieSelected(movie);
+      setisBookingOpen(true);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      {/* 1. Encabezado / Navbar Simple */}
       <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur px-6 py-4 flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <Film className="text-rose-500" size={24} />
-          <span className="font-bold text-lg tracking-tight">Cineclub Vecinal</span>
+          <span className="font-bold text-lg tracking-tight">Cineclub Cierzo</span>
         </div>
 
         <div>
@@ -58,26 +71,33 @@ export default function App() {
         </div>
       </header>
 
-      {/* 2. Contenido Principal */}
       <main className="flex-1 max-w-4xl mx-auto w-full p-6 space-y-6">
         <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center space-y-2">
           <h1 className="text-2xl font-extrabold text-white">Cartelera de la Semana</h1>
-          <p className="text-sm text-slate-400">
-            Reserva tu silla y participa en las decisiones del cineclub.
-          </p>
+          <p className="text-sm text-slate-400">Reserva tu silla y participa en el cineclub.</p>
         </section>
 
-        <div className="border border-dashed border-slate-800 rounded-2xl p-12 text-center text-slate-500 text-sm">
-          Próximamente: Componente de la película activa
-        </div>
+        <ScreeningModal 
+          user={session?.user} 
+          onBookingClick={handleBookingClick} 
+        />
       </main>
 
-      {/* Modal de Inicio de Sesión */}
+      {/* Modals */}
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+      
+      <BookingModal 
+        isOpen={isBookingOpen} 
+        movie={movieSelected}
+        userId={session?.user?.id}
+        onClose={() => setisBookingOpen(false)}
+        onSuccessBooking={(ticket) => {
+          alert('¡Reserva enviada exitosamente! Tu boleta está en estado pendiente de aprobación.');
+        }}
+      />
 
-      {/* 3. Pie de página */}
       <footer className="border-t border-slate-900 py-4 text-center text-xs text-slate-600">
-        Cineclub Vecinal • Aforo 12-24 personas
+        Cineclub Cierzo • Aforo 12-24 personas
       </footer>
     </div>
   );

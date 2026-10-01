@@ -2,40 +2,40 @@ import React, { useEffect, useState } from 'react';
 import { Calendar, Clock, Ticket, Sparkles, CheckCircle2, Clock3, AlertCircle, Film } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 
-export default function FuncionActiva({ user, onReservarClick }) {
-  const [funcion, setFuncion] = useState(null);
-  const [miBoleta, setMiBoleta] = useState(null);
+export default function ActiveMovie({ user, onBookingClick }) { //FuncionActiva
+  const [movie, setMovie] = useState(null); // funcion, setFuncion
+  const [myTicket, setMyTicket] = useState(null); // miBoleta, setMiBoleta
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    cargarFuncionYReserva();
+    loadMovieAndBooking();
   }, [user]);
 
-  const cargarFuncionYReserva = async () => {
+  const loadMovieAndBooking = async () => {
     setLoading(true);
     try {
-      // 1. Consultar la próxima función en cartelera
-      const { data: funcionData, error } = await supabase
-        .from('funciones')
+      // 1. Read the next movie
+      const { data: movieData, error } = await supabase
+        .from('movie_screening')
         .select(`
           *,
-          ciclos ( titulo ),
-          boletas ( id, user_id, estado )
+          cicles ( title ),
+          tickets ( id, user_id, status )
         `)
-        .gte('fecha_hora', new Date().toISOString())
-        .order('fecha_hora', { ascending: true })
+        .gte('date_time', new Date().toISOString())
+        .order('date_time', { ascending: true })
         .limit(1)
         .maybeSingle();
 
       if (error) throw error;
-      setFuncion(funcionData);
+      setMovie(movieData);
 
-      // 2. Si hay un usuario conectado, verificar si ya tiene reserva registrada
-      if (user && funcionData) {
-        const boletaUsuario = funcionData.boletas?.find(b => b.user_id === user.id && b.estado !== 'rechazada');
-        setMiBoleta(boletaUsuario || null);
+      // 2. If there's a logged user, verify ir already has a registered booking 
+      if (user && movieData) {
+        const ticketUser = movieData.ticket?.find(b => b.user_id === user.id && b.status !== 'rejected');
+        setMyTicket(ticketUser || null);
       } else {
-        setMiBoleta(null);
+        setMyTicket(null);
       }
     } catch (err) {
       console.error('Error al cargar la función:', err);
@@ -53,7 +53,7 @@ export default function FuncionActiva({ user, onReservarClick }) {
     );
   }
 
-  if (!funcion) {
+  if (!movie) {
     return (
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center text-slate-500 space-y-2">
         <Film className="mx-auto text-slate-600 opacity-50" size={48} />
@@ -64,12 +64,12 @@ export default function FuncionActiva({ user, onReservarClick }) {
   }
 
   // Cálculos de aforo
-  const boletasValidas = funcion.boletas?.filter(b => b.estado !== 'rechazada') || [];
-  const ocupados = boletasValidas.length;
-  const maximo = funcion.cupo_maximo;
-  const porcentajeAforo = Math.min(100, Math.round((ocupados / maximo) * 100));
-  const aforoAgotado = ocupados >= maximo;
-  const fecha = new Date(funcion.fecha_hora);
+  const validTickets = movie.tickets?.filter(b => b.status !== 'rejected') || []; //boletasValidas
+  const taken = validTickets.length; // ocupados
+  const max = movie.max_capacity;
+  const percentCapacity = Math.min(100, Math.round((taken / max) * 100));
+  const soldOut = taken >= max;
+  const date = new Date(movie.date_time);
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
@@ -77,10 +77,10 @@ export default function FuncionActiva({ user, onReservarClick }) {
         
         {/* Columna Izquierda: Poster / Ilustración */}
         <div className="md:col-span-2 bg-slate-950 min-h-[220px] flex items-center justify-center relative border-b md:border-b-0 md:border-r border-slate-800">
-          {funcion.poster_url ? (
+          {movie.poster_url ? (
             <img 
-              src={funcion.poster_url} 
-              alt={funcion.titulo} 
+              src={movie.poster_url} 
+              alt={movie.title} 
               className="w-full h-full object-cover"
             />
           ) : (
@@ -90,10 +90,10 @@ export default function FuncionActiva({ user, onReservarClick }) {
             </div>
           )}
 
-          {funcion.ciclos?.titulo && (
+          {movie.cicles?.title && (
             <span className="absolute top-3 left-3 bg-slate-950/90 text-amber-400 border border-amber-500/30 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur flex items-center gap-1.5">
               <Sparkles size={13} />
-              {funcion.ciclos.titulo}
+              {movie.cicles.title}
             </span>
           )}
         </div>
@@ -102,44 +102,44 @@ export default function FuncionActiva({ user, onReservarClick }) {
         <div className="md:col-span-3 p-6 space-y-5 flex flex-col justify-between">
           <div className="space-y-2">
             <span className="text-[10px] font-bold uppercase tracking-wider text-rose-500">Próxima Función</span>
-            <h2 className="text-2xl font-extrabold text-white">{funcion.titulo}</h2>
-            <p className="text-slate-400 text-xs leading-relaxed">{funcion.descripcion}</p>
+            <h2 className="text-2xl font-extrabold text-white">{movie.title}</h2>
+            <p className="text-slate-400 text-xs leading-relaxed">{movie.description}</p>
           </div>
 
           {/* Ficha técnica rápida */}
           <div className="grid grid-cols-2 gap-3 py-3 border-y border-slate-800/80 text-xs text-slate-300">
             <div className="flex items-center space-x-2">
               <Calendar size={15} className="text-rose-500" />
-              <span>{fecha.toLocaleDateString('es-ES', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+              <span>{date.toLocaleDateString('es-ES', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
             </div>
             <div className="flex items-center space-x-2">
               <Clock size={15} className="text-rose-500" />
-              <span>{fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} ({funcion.duracion_minutos}m)</span>
+              <span>{date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} ({movie.mins_duration}m)</span>
             </div>
           </div>
 
           {/* Barra de Aforo Dinámica */}
           <div className="space-y-1.5">
             <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-400 font-medium">{ocupados} de {maximo} sillas ocupadas</span>
-              <span className={`font-bold text-[11px] ${aforoAgotado ? 'text-rose-400' : 'text-emerald-400'}`}>
-                {aforoAgotado ? 'Agotado' : `${maximo - ocupados} sillas libres`}
+              <span className="text-slate-400 font-medium">{taken} de {max} sillas ocupadas</span>
+              <span className={`font-bold text-[11px] ${soldOut ? 'text-rose-400' : 'text-emerald-400'}`}>
+                {soldOut ? 'Agotado' : `${max - taken} sillas libres`}
               </span>
             </div>
             <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
               <div 
                 className={`h-full transition-all duration-500 ${
-                  porcentajeAforo >= 90 ? 'bg-rose-500' : porcentajeAforo >= 70 ? 'bg-amber-500' : 'bg-emerald-500'
+                  percentCapacity >= 90 ? 'bg-rose-500' : percentCapacity >= 70 ? 'bg-amber-500' : 'bg-emerald-500'
                 }`}
-                style={{ width: `${porcentajeAforo}%` }}
+                style={{ width: `${percentCapacity}%` }}
               />
             </div>
           </div>
 
           {/* Renderizado Condicional del Botón según Estado */}
-          {miBoleta ? (
+          {myTicket ? (
             <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center space-x-3">
-              {miBoleta.estado === 'pendiente' ? (
+              {myTicket.status === 'pending' ? (
                 <>
                   <Clock3 className="text-amber-400 shrink-0" size={20} />
                   <div className="text-xs">
@@ -159,10 +159,10 @@ export default function FuncionActiva({ user, onReservarClick }) {
             </div>
           ) : (
             <button
-              onClick={() => onReservarClick(funcion)}
-              disabled={aforoAgotado}
+              onClick={() => onBookingClick(movie)}
+              disabled={soldOut}
               className={`w-full py-3 px-4 rounded-xl font-bold text-sm transition flex items-center justify-center space-x-2 ${
-                aforoAgotado 
+                soldOut 
                   ? 'bg-slate-800 text-slate-500 cursor-not-allowed' 
                   : 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/20'
               }`}
@@ -171,7 +171,7 @@ export default function FuncionActiva({ user, onReservarClick }) {
               <span>
                 {!user 
                   ? 'Ingresa para reservar' 
-                  : aforoAgotado 
+                  : onBookingClick 
                     ? 'Aforo Completo' 
                     : 'Reservar Mi Silla'}
               </span>

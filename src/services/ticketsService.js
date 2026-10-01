@@ -1,12 +1,12 @@
 import { supabase } from '../lib/supabaseClient';
 
-export const boletasService = {
-  // 1. Verificar si el vecino ya tiene una reserva para esta función
-  async getMiBoleta(funcionId, userId) {
+export const ticketsService = {
+  // 1. Verify if the user already has a booking for that movie
+  async getMyTicket(movieId, userId) { // getMiBoleta
     const { data, error } = await supabase
-      .from('boletas')
+      .from('tickets')
       .select('*')
-      .eq('funcion_id', funcionId)
+      .eq('movie_id', movieId)
       .eq('user_id', userId)
       .maybeSingle();
 
@@ -14,46 +14,46 @@ export const boletasService = {
     return data;
   },
 
-  // 2. Subir comprobante al Bucket y registrar la reserva en la tabla boletas
-  async reservarBoleta({ funcionId, userId, fileComprobante, solicitarMiembro }) {
-    // A. Subir imagen al Bucket 'comprobantes'
-    const fileExt = fileComprobante.name.split('.').pop();
+  // 2. Upload the voucher to the bucket and registry the booking into the ticket table
+  async bookingTicket({ movieId, userId, fileVoucher, getMember }) { // reservarBoleta({ funcionId, userId, fileComprobante, solicitarMiembro })
+    // A. Upload image voucher into bucket 'receipt'
+    const fileExt = fileVoucher.name.split('.').pop();
     const fileName = `${userId}_${Date.now()}.${fileExt}`;
-    const filePath = `transferencias/${fileName}`;
+    const filePath = `transferences/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
-      .from('comprobantes')
-      .upload(filePath, fileComprobante);
+      .from('receipt')
+      .upload(filePath, fileVoucher);
 
     if (uploadError) throw uploadError;
 
-    // B. Obtener URL pública de la captura
+    // B. Get public URL of the voucher
     const { data: { publicUrl } } = supabase.storage
-      .from('comprobantes')
+      .from('receipt')
       .getPublicUrl(filePath);
 
-    // C. Crear la boleta en la base de datos
-    const { data: boleta, error: boletaError } = await supabase
-      .from('boletas')
+    // C. Create the ticket in the DB
+    const { data: ticket, error: ticketError } = await supabase
+      .from('tickets')
       .insert([{
-        funcion_id: funcionId,
+        movie_id: movieId,
         user_id: userId,
-        comprobante_url: publicUrl,
-        estado: 'pendiente'
+        recipt_url: publicUrl,
+        status: 'pending'
       }])
       .select()
       .single();
 
-    if (boletaError) throw boletaError;
+    if (ticketError) throw ticketError;
 
     // D. Si el usuario marcó la casilla de miembro, actualizar su perfil
-    if (solicitarMiembro) {
+    if (getMember) {
       await supabase
         .from('profiles')
-        .update({ rol: 'miembro' })
+        .update({ role: 'member' })
         .eq('id', userId);
     }
 
-    return boleta;
+    return ticket;
   }
 };

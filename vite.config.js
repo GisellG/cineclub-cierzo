@@ -8,5 +8,5 @@ export default defineConfig({
     react(),
     tailwindcss()
   ],
-  base: '/cineclub-cierzo/', // Para el despliegue en GitHub Pages
+  base: '/cineclub-cierzo/',
 });

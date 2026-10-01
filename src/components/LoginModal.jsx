@@ -5,34 +5,34 @@ import { supabase } from '../lib/supabaseClient';
 export default function LoginModal({ isOpen, onClose }) {
   const [email, setEmail] = useState('');
   const [token, setToken] = useState('');
-  const [step, setStep] = useState(1); // Paso 1: Pedir Email, Paso 2: Pedir Código OTP
+  const [step, setStep] = useState(1); // Step 1: Wait for Email, Step 2: Ask for OTP code
   const [loading, setLoading] = useState(false);
-  const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
+  const [message, setMessage] = useState({ type: '', text: '' });
 
   if (!isOpen) return null;
 
-  // Paso 1: Solicitar código OTP al correo
+  // Step 1: Ask for OTP code via Email
   const handleSendOtp = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setMensaje({ tipo: '', texto: '' });
+    setMessage({ type: '', text: '' });
 
     const { error } = await supabase.auth.signInWithOtp({ email });
 
     setLoading(false);
     if (error) {
-      setMensaje({ tipo: 'error', texto: error.message });
+      setMessage({ type: 'error', text: error.message });
     } else {
       setStep(2);
-      setMensaje({ tipo: 'exito', texto: 'Código enviado a tu correo. Revisa tu bandeja de entrada.' });
+      setMessage({ type: 'success', text: 'Código enviado a tu correo. Revisa tu bandeja de entrada.' });
     }
   };
 
-  // Paso 2: Verificar el código ingresado por el vecino
+  // Step 2: Verify the code sent by the user
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setMensaje({ tipo: '', texto: '' });
+    setMessage({ type: '', text: '' });
 
     const { error } = await supabase.auth.verifyOtp({
       email,
@@ -42,9 +42,9 @@ export default function LoginModal({ isOpen, onClose }) {
 
     setLoading(false);
     if (error) {
-      setMensaje({ tipo: 'error', texto: 'Código incorrecto o vencido.' });
+      setMessage({ type: 'error', text: 'Código incorrecto o vencido.' });
     } else {
-      onClose(); // Cerrar modal al autenticar con éxito
+      onClose(); // Close the modal if it's auth successfully.
     }
   };
 
@@ -67,11 +67,11 @@ export default function LoginModal({ isOpen, onClose }) {
             : `Enviamos un código de 6 dígitos a ${email}`}
         </p>
 
-        {mensaje.texto && (
+        {message.text && (
           <div className={`p-3 rounded-xl text-xs mb-4 ${
-            mensaje.tipo === 'error' ? 'bg-rose-950/50 border border-rose-800/50 text-rose-300' : 'bg-emerald-950/50 border border-emerald-800/50 text-emerald-300'
+            message.type === 'error' ? 'bg-rose-950/50 border border-rose-800/50 text-rose-300' : 'bg-emerald-950/50 border border-emerald-800/50 text-emerald-300'
           }`}>
-            {mensaje.texto}
+            {message.text}
           </div>
         )}
 
