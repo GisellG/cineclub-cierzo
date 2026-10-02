@@ -2,17 +2,27 @@ import React, { useState } from 'react';
 import { Mail, KeyRound, ArrowRight, X } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 
-export default function LoginModal({ isOpen, onClose }) {
-  const [email, setEmail] = useState('');
-  const [token, setToken] = useState('');
-  const [step, setStep] = useState(1); // Step 1: Wait for Email, Step 2: Ask for OTP code
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
+interface LoginModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+interface MessageState {
+  type: 'error' | 'success' | '';
+  text: string;
+}
+
+export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
+  const [email, setEmail] = useState<string>('');
+  const [token, setToken] = useState<string>('');
+  const [step, setStep] = useState<number>(1); // Step 1: Wait for Email, Step 2: Ask for OTP code
+  const [loading, setLoading] = useState<boolean>(false);
+  const [message, setMessage] = useState<MessageState>({ type: '', text: '' });
 
   if (!isOpen) return null;
 
   // Step 1: Ask for OTP code via Email
-  const handleSendOtp = async (e) => {
+  const handleSendOtp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setMessage({ type: '', text: '' });
@@ -29,7 +39,7 @@ export default function LoginModal({ isOpen, onClose }) {
   };
 
   // Step 2: Verify the code sent by the user
-  const handleVerifyOtp = async (e) => {
+  const handleVerifyOtp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setMessage({ type: '', text: '' });
@@ -44,7 +54,7 @@ export default function LoginModal({ isOpen, onClose }) {
     if (error) {
       setMessage({ type: 'error', text: 'Código incorrecto o vencido.' });
     } else {
-      onClose(); // Close the modal if it's auth successfully.
+      onClose(); // Close the modal if auth successfully.
     }
   };
 

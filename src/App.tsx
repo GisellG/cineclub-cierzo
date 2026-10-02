@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Film, LogOut } from 'lucide-react';
+import { Session } from '@supabase/supabase-js';
 import { supabase } from './lib/supabaseClient';
 import LoginModal from './components/LoginModal';
 import ScreeningModal from './components/ScreeningModal';
 import BookingModal from './components/BookingModal';
+import { MovieScreening } from './types';
 
 export default function App() {
-  const [session, setSession] = useState(null);
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoginOpen, setIsLoginOpen] = useState<boolean>(false);
 
   // State for the booking
-  const [isBookingOpen, setisBookingOpen] = useState(false); //isReserva
-  const [movieSelected, setMovieSelected] = useState(null); //funcionSeleccionada
+  const [isBookingOpen, setIsBookingOpen] = useState<boolean>(false);
+  const [movieSelected, setMovieSelected] = useState<MovieScreening | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -29,12 +31,12 @@ export default function App() {
     await supabase.auth.signOut();
   };
 
-  const handleBookingClick = (movie) => {
+  const handleBookingClick = (movie: MovieScreening) => {
     if (!session) {
       setIsLoginOpen(true);
     } else {
       setMovieSelected(movie);
-      setisBookingOpen(true);
+      setIsBookingOpen(true);
     }
   };
 
@@ -54,7 +56,7 @@ export default function App() {
               </span>
               <button 
                 onClick={handleLogout}
-                className="text-slate-400 hover:text-rose-400 p-1 transition"
+                className="text-slate-400 hover:text-rose-400 p-1 transition cursor-pointer"
                 title="Cerrar sesión"
               >
                 <LogOut size={18} />
@@ -63,7 +65,7 @@ export default function App() {
           ) : (
             <button 
               onClick={() => setIsLoginOpen(true)}
-              className="text-xs bg-rose-600 hover:bg-rose-500 font-semibold px-4 py-2 rounded-xl transition"
+              className="text-xs bg-rose-600 hover:bg-rose-500 font-semibold px-4 py-2 rounded-xl transition cursor-pointer"
             >
               Ingresar
             </button>
@@ -90,8 +92,8 @@ export default function App() {
         isOpen={isBookingOpen} 
         movie={movieSelected}
         userId={session?.user?.id}
-        onClose={() => setisBookingOpen(false)}
-        onSuccessBooking={(ticket) => {
+        onClose={() => setIsBookingOpen(false)}
+        onSuccessBooking={() => {
           alert('¡Reserva enviada exitosamente! Tu boleta está en estado pendiente de aprobación.');
         }}
       />

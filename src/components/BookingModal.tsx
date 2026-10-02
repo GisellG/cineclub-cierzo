@@ -1,19 +1,33 @@
 import React, { useState } from 'react';
 import { Upload, X, AlertCircle, UserCheck } from 'lucide-react';
 import { ticketsService } from '../services/ticketsService';
+import { MovieScreening, Ticket } from '../types';
 
-export default function BookingModal({ isOpen, movie, userId, onClose, onSuccessBooking }) { //isOpen, funcion, userId, onClose, onReservaExitosa
-  const [file, setFile] = useState(null);
-  const [getMember, setGetMember] = useState(false); //solicitarMiembro, setSolicitarMiembro
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
+interface BookingModalProps {
+  isOpen: boolean;
+  movie: MovieScreening | null;
+  userId?: string;
+  onClose: () => void;
+  onSuccessBooking: (ticket: Ticket) => void;
+}
+
+export default function BookingModal({ isOpen, movie, userId, onClose, onSuccessBooking }: BookingModalProps) {
+  const [file, setFile] = useState<File | null>(null);
+  const [getMember, setGetMember] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [errorMsg, setErrorMsg] = useState<string>('');
 
   if (!isOpen || !movie) return null;
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!file) {
       setErrorMsg('Adjunta la captura del comprobante.');
+      return;
+    }
+
+    if (!userId) {
+      setErrorMsg('Usuario no autenticado.');
       return;
     }
 
@@ -70,7 +84,7 @@ export default function BookingModal({ isOpen, movie, userId, onClose, onSuccess
               <input 
                 type="file" 
                 accept="image/*"
-                onChange={(e) => setFile(e.target.files[0])}
+                onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)}
                 className="hidden" 
                 id="receipt-file" 
               />

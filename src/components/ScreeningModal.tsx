@@ -1,11 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, Clock, Ticket, Sparkles, CheckCircle2, Clock3, AlertCircle, Film } from 'lucide-react';
+import { Calendar, Clock, Ticket as TicketIcon, Sparkles, CheckCircle2, Clock3, Film } from 'lucide-react';
+import { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabaseClient';
+import { MovieScreening, Ticket } from '../types';
 
-export default function ActiveMovie({ user, onBookingClick }) { //FuncionActiva
-  const [movie, setMovie] = useState(null); // funcion, setFuncion
-  const [myTicket, setMyTicket] = useState(null); // miBoleta, setMiBoleta
-  const [loading, setLoading] = useState(true);
+interface ScreeningModalProps {
+  user?: User | null;
+  onBookingClick: (movie: MovieScreening) => void;
+}
+
+export default function ScreeningModal({ user, onBookingClick }: ScreeningModalProps) {
+  const [movie, setMovie] = useState<MovieScreening | null>(null);
+  const [myTicket, setMyTicket] = useState<Ticket | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     loadMovieAndBooking();
@@ -28,11 +35,13 @@ export default function ActiveMovie({ user, onBookingClick }) { //FuncionActiva
         .maybeSingle();
 
       if (error) throw error;
-      setMovie(movieData);
+      const currentMovie = movieData as MovieScreening | null;
+      setMovie(currentMovie);
 
-      // 2. If there's a logged user, verify ir already has a registered booking 
-      if (user && movieData) {
-        const ticketUser = movieData.ticket?.find(b => b.user_id === user.id && b.status !== 'rejected');
+      // 2. If there's a logged user, verify if already has a registered booking 
+      if (user && currentMovie) {
+        const ticketList = currentMovie.tickets || currentMovie.ticket || [];
+        const ticketUser = ticketList.find(b => b.user_id === user.id && b.status !== 'rejected');
         setMyTicket(ticketUser || null);
       } else {
         setMyTicket(null);
@@ -64,8 +73,9 @@ export default function ActiveMovie({ user, onBookingClick }) { //FuncionActiva
   }
 
   // Cálculos de aforo
-  const validTickets = movie.tickets?.filter(b => b.status !== 'rejected') || []; //boletasValidas
-  const taken = validTickets.length; // ocupados
+  const ticketList = movie.tickets || movie.ticket || [];
+  const validTickets = ticketList.filter(b => b.status !== 'rejected');
+  const taken = validTickets.length;
   const max = movie.max_capacity;
   const percentCapacity = Math.min(100, Math.round((taken / max) * 100));
   const soldOut = taken >= max;
@@ -167,13 +177,11 @@ export default function ActiveMovie({ user, onBookingClick }) { //FuncionActiva
                   : 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/20'
               }`}
             >
-              <Ticket size={18} />
+              <TicketIcon size={18} />
               <span>
                 {!user 
                   ? 'Ingresa para reservar' 
-                  : onBookingClick 
-                    ? 'Aforo Completo' 
-                    : 'Reservar Mi Silla'}
+                  : 'Reservar Mi Silla'}
               </span>
             </button>
           )}
