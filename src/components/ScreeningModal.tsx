@@ -7,16 +7,17 @@ import { MovieScreening, Ticket } from '../types';
 interface ScreeningModalProps {
   user?: User | null;
   onBookingClick: (movie: MovieScreening) => void;
+  refreshTrigger?: number;
 }
 
-export default function ScreeningModal({ user, onBookingClick }: ScreeningModalProps) {
+export default function ScreeningModal({ user, onBookingClick, refreshTrigger }: ScreeningModalProps) {
   const [movie, setMovie] = useState<MovieScreening | null>(null);
   const [myTicket, setMyTicket] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     loadMovieAndBooking();
-  }, [user]);
+  }, [user, refreshTrigger]);
 
   const loadMovieAndBooking = async () => {
     setLoading(true);
@@ -27,9 +28,9 @@ export default function ScreeningModal({ user, onBookingClick }: ScreeningModalP
         .select(`
           *,
           cicles ( title ),
-          tickets ( id, user_id, status )
+          tickets ( id, user_id, status, seats )
         `)
-        .gte('date_time', new Date().toISOString())
+        // .gte('date_time', new Date().toISOString())
         .order('date_time', { ascending: true })
         .limit(1)
         .maybeSingle();
@@ -74,6 +75,7 @@ export default function ScreeningModal({ user, onBookingClick }: ScreeningModalP
 
   // Cálculos de aforo
   const ticketList = movie.tickets || movie.ticket || [];
+  console.log("movie info: ",movie);
   const validTickets = ticketList.filter(b => b.status !== 'rejected');
   const taken = validTickets.length;
   const max = movie.max_capacity;

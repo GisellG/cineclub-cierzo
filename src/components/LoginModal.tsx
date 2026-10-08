@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Mail, KeyRound, ArrowRight, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Mail, KeyRound, ArrowRight, X, ArrowLeft } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 
 interface LoginModalProps {
@@ -19,13 +19,51 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [loading, setLoading] = useState<boolean>(false);
   const [message, setMessage] = useState<MessageState>({ type: '', text: '' });
 
+  useEffect(() => {
+    if (!isOpen) {
+      setEmail('');
+      setToken('');
+      setStep(1);
+      setLoading(false);
+      setMessage({ type: '', text: '' });
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
+
+  // TEST ONLY STARTS
+  // Credenciales fijas para desarrollo
+  const DEV_TEST_EMAILS = [
+    'test@cierzocineclub.cc',
+    'testadmin@cierzocineclub.cc',
+    'testqa@cierzocineclub.cc',
+  ];
+  const DEV_OTP_CODE = '123456';
+  const DEV_PASSWORD = 'DevPass123!';
+
+  // Helper para verificar si el correo ingresado es de prueba
+  const isTestAccount = (inputEmail: string) =>
+    DEV_TEST_EMAILS.includes(inputEmail.trim().toLowerCase());
+  // TEST ONLY ENDS
 
   // Step 1: Ask for OTP code via Email
   const handleSendOtp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setMessage({ type: '', text: '' });
+
+    // 🚀 MODO DEV/TESTING: Si es el correo de prueba, no llamamos a Resend
+    const cleanEmail = email.trim();
+
+    if (isTestAccount(cleanEmail)) {
+      setLoading(false);
+      setStep(2);
+      setMessage({ 
+        type: 'success', 
+        text: `Modo Pruebas activo (${cleanEmail}). Usa el código: ${DEV_OTP_CODE}` 
+      });
+      return;
+    }
 
     const { error } = await supabase.auth.signInWithOtp({ email });
 
@@ -43,6 +81,25 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     e.preventDefault();
     setLoading(true);
     setMessage({ type: '', text: '' });
+
+    // 🚀 MODO DEV/TESTING: Inicia sesión con contraseña por debajo
+    const cleanEmail = email.trim();
+
+    if (isTestAccount(cleanEmail) && token.trim() === DEV_OTP_CODE) {
+      const { error: devError } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: DEV_PASSWORD,
+      });
+
+      setLoading(false);
+      if (devError) {
+        setMessage({ type: 'error', text: 'Error en el login de desarrollo: ' + devError.message });
+      } else {
+        onClose();
+      }
+      return;
+    }
+
 
     const { error } = await supabase.auth.verifyOtp({
       email,
@@ -134,6 +191,19 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               className="w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 rounded-xl text-sm transition disabled:opacity-50"
             >
               {loading ? 'Verificando...' : 'Confirmar e Ingresar'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setStep(1);
+                setToken('');
+                setMessage({ type: '', text: '' });
+              }}
+              className="w-full text-xs text-slate-400 hover:text-white flex items-center justify-center space-x-1 pt-1 transition"
+            >
+              <ArrowLeft size={14} />
+              <span>Cambiar correo</span>
             </button>
           </form>
         )}

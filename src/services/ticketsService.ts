@@ -16,7 +16,7 @@ export const ticketsService = {
   },
 
   // 2. Upload the voucher to the bucket and registry the booking into the ticket table
-  async bookingTicket({ movieId, userId, fileVoucher, getMember }: BookingTicketParams): Promise<Ticket> {
+  async bookingTicket({ movieId, userId, fileVoucher, getMember, seats }: BookingTicketParams): Promise<Ticket> {
     // A. Ensure user profile exists in 'profiles' table to satisfy FK constraint 'tickets_user_id_fkey'
     const { data: existingProfile } = await supabase
       .from('profiles')
@@ -70,7 +70,8 @@ export const ticketsService = {
         movie_id: movieId,
         user_id: userId,
         recipt_url: publicUrl,
-        status: 'pending'
+        status: 'pending',
+        ...(seats && seats.length > 0 ? { seats } : {})
       }])
       .select()
       .single();
@@ -78,5 +79,37 @@ export const ticketsService = {
     if (ticketError) throw ticketError;
 
     return ticket as Ticket;
+  },
+
+  // 3. Fetch pending tickets for admin approval
+  async getPendingTickets(): Promise<Ticket[]> {
+    const { data, error } = await supabase
+      .from('tickets')
+      .select(`
+        *,
+        movie_screening ( id, title, date_time, poster_url ),
+        profiles ( id, email, role )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return (data || []) as Ticket[];
+  },
+
+  // 4. Update ticket status (approve / reject)
+  async updateTicketStatus(ticketId: string, status: 'confirmed' | 'rejected'): Promise<Ticket> {
+    const { data, error } = await supabase
+      .from('tickets')
+      .update({ status })
+      .eq('id', ticketId)
+      .select(`
+        *,
+        movie_screening ( id, title, date_time, poster_url ),
+        profiles ( id, email, role )
+      `)
+      .single();
+
+    if (error) throw new Error(`Error al actualizar el estado de la boleta: ${error.message}`);
+    return data as Ticket;
   }
 };
