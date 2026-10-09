@@ -73,11 +73,48 @@ export default function ScreeningModal({ user, onBookingClick, refreshTrigger }:
     );
   }
 
+  // Helper to parse seats from ticket
+  const parseSeats = (seatsData: unknown): string[] => {
+    if (!seatsData) return [];
+    if (Array.isArray(seatsData)) {
+      return seatsData.map((s) => String(s).trim().toUpperCase()).filter(Boolean);
+    }
+    if (typeof seatsData === 'string') {
+      let str = seatsData.trim();
+      if (str.startsWith('{') && str.endsWith('}')) str = str.slice(1, -1);
+      try {
+        const parsed = JSON.parse(str);
+        if (Array.isArray(parsed)) {
+          return parsed.map((s) => String(s).trim().toUpperCase()).filter(Boolean);
+        }
+      } catch {
+        // not JSON
+      }
+      return str
+        .split(',')
+        .map((s) => s.trim().replace(/['"]/g, '').toUpperCase())
+        .filter(Boolean);
+    }
+    return [];
+  };
+
   // Cálculos de aforo
   const ticketList = movie.tickets || movie.ticket || [];
-  console.log("movie info: ",movie);
-  const validTickets = ticketList.filter(b => b.status !== 'rejected');
-  const taken = validTickets.length;
+  const validTickets = ticketList.filter((b) => b.status !== 'rejected');
+  
+  const takenSeatsSet = new Set<string>();
+  let fallbackSeatCount = 0;
+
+  validTickets.forEach((t) => {
+    const seats = parseSeats(t.seats);
+    if (seats.length > 0) {
+      seats.forEach((s) => takenSeatsSet.add(s));
+    } else {
+      fallbackSeatCount += 1;
+    }
+  });
+
+  const taken = takenSeatsSet.size + fallbackSeatCount;
   const max = movie.max_capacity;
   const percentCapacity = Math.min(100, Math.round((taken / max) * 100));
   const soldOut = taken >= max;

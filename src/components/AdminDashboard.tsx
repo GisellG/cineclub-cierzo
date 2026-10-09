@@ -18,7 +18,8 @@ import {
   CheckCircle2,
   XCircle,
   ExternalLink,
-  Eye
+  Eye,
+  Armchair
 } from 'lucide-react';
 import { User } from '@supabase/supabase-js';
 import { MovieScreening, CreateMovieInput, Cicle, Profile, Ticket } from '../types';
@@ -31,6 +32,32 @@ interface AdminDashboardProps {
   profile: Profile | null;
   onClose?: () => void;
 }
+
+const parseTicketSeats = (seatsData: unknown): string[] => {
+  if (!seatsData) return [];
+  if (Array.isArray(seatsData)) {
+    return seatsData.map((s) => String(s).trim().toUpperCase()).filter(Boolean);
+  }
+  if (typeof seatsData === 'string') {
+    let str = seatsData.trim();
+    if (str.startsWith('{') && str.endsWith('}')) {
+      str = str.slice(1, -1);
+    }
+    try {
+      const parsed = JSON.parse(str);
+      if (Array.isArray(parsed)) {
+        return parsed.map((s) => String(s).trim().toUpperCase()).filter(Boolean);
+      }
+    } catch {
+      // not JSON
+    }
+    return str
+      .split(',')
+      .map((s) => s.trim().replace(/['"]/g, '').toUpperCase())
+      .filter(Boolean);
+  }
+  return [];
+};
 
 type AdminTab = 'movies' | 'tickets';
 type TicketFilter = 'pending' | 'confirmed' | 'rejected' | 'all';
@@ -576,7 +603,20 @@ export default function AdminDashboard({ user, profile, onClose }: AdminDashboar
               <div className="divide-y divide-slate-800">
                 {movies.map((m) => {
                   const date = new Date(m.date_time);
-                  const bookedTickets = m.tickets ? m.tickets.filter((t) => t.status !== 'rejected').length : 0;
+                  const validTickets = m.tickets ? m.tickets.filter((t) => t.status !== 'rejected') : [];
+                  const takenSeatsSet = new Set<string>();
+                  let unassignedCount = 0;
+
+                  validTickets.forEach((t) => {
+                    const seats = parseTicketSeats(t.seats);
+                    if (seats.length > 0) {
+                      seats.forEach((s) => takenSeatsSet.add(s));
+                    } else {
+                      unassignedCount += 1;
+                    }
+                  });
+
+                  const bookedSeatsCount = takenSeatsSet.size + unassignedCount;
 
                   return (
                     <div key={m.id} className="p-4 sm:p-5 hover:bg-slate-800/40 transition flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -638,7 +678,7 @@ export default function AdminDashboard({ user, profile, onClose }: AdminDashboar
                             <span className="flex items-center space-x-1">
                               <Users size={12} />
                               <span>
-                                Boletas: {bookedTickets}/{m.max_capacity}
+                                Sillas ocupadas: {bookedSeatsCount}/{m.max_capacity}
                               </span>
                             </span>
                           </div>
@@ -756,6 +796,9 @@ export default function AdminDashboard({ user, profile, onClose }: AdminDashboar
                   const isConfirmed = t.status === 'confirmed';
                   const isRejected = t.status === 'rejected';
 
+                  const ticketSeats = parseTicketSeats(t.seats);
+                  const seatsCount = ticketSeats.length > 0 ? ticketSeats.length : 1;
+
                   return (
                     <div key={t.id} className="p-5 hover:bg-slate-800/40 transition flex flex-col md:flex-row md:items-center justify-between gap-4">
                       {/* Left: Info */}
@@ -793,6 +836,25 @@ export default function AdminDashboard({ user, profile, onClose }: AdminDashboar
                               </span>
                             )}
                           </p>
+
+                          {/* Cantidad de Personas y Sillas Reservadas */}
+                          <div className="flex flex-wrap items-center gap-2 pt-1 pb-1">
+                            <span className="inline-flex items-center space-x-1.5 bg-slate-950 border border-slate-800 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-200">
+                              <Users size={13} className="text-rose-400" />
+                              <span>{seatsCount} {seatsCount === 1 ? 'persona' : 'personas'}</span>
+                            </span>
+
+                            {ticketSeats.length > 0 ? (
+                              <span className="inline-flex items-center space-x-1.5 bg-rose-950/40 border border-rose-800/50 px-2.5 py-1 rounded-lg text-xs font-bold text-rose-300 font-mono">
+                                <Armchair size={13} className="text-rose-400" />
+                                <span>Sillas: {ticketSeats.join(', ')}</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center space-x-1 text-[11px] text-slate-500 italic bg-slate-950/50 px-2 py-0.5 rounded border border-slate-800/50">
+                                (Sin sillas asignadas)
+                              </span>
+                            )}
+                          </div>
 
                           {movie?.date_time && (
                             <p className="text-slate-400">
