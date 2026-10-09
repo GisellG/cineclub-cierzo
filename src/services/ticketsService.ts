@@ -1,5 +1,23 @@
 import { supabase } from '../lib/supabaseClient';
 import { BookingTicketParams, Ticket } from '../types';
+import { emailService } from './emailService';
+
+const parseSeatsHelper = (seatsData: unknown): string[] => {
+  if (!seatsData) return [];
+  if (Array.isArray(seatsData)) return seatsData.map((s) => String(s).trim().toUpperCase()).filter(Boolean);
+  if (typeof seatsData === 'string') {
+    let str = seatsData.trim();
+    if (str.startsWith('{') && str.endsWith('}')) str = str.slice(1, -1);
+    try {
+      const parsed = JSON.parse(str);
+      if (Array.isArray(parsed)) return parsed.map((s) => String(s).trim().toUpperCase()).filter(Boolean);
+    } catch {
+      // not JSON
+    }
+    return str.split(',').map((s) => s.trim().replace(/['"]/g, '').toUpperCase()).filter(Boolean);
+  }
+  return [];
+};
 
 export const ticketsService = {
   // 1. Verify if the user already has a booking for that movie
@@ -110,6 +128,18 @@ export const ticketsService = {
       .single();
 
     if (error) throw new Error(`Error al actualizar el estado de la boleta: ${error.message}`);
-    return data as Ticket;
+    const ticket = data as Ticket;
+
+    if (status === 'confirmed' && ticket.profiles?.email) {
+      const seatsList = parseSeatsHelper(ticket.seats);
+      await emailService.sendTicketConfirmation({
+        toEmail: ticket.profiles.email,
+        movieTitle: ticket.movie_screening?.title || 'Función de Cineclub',
+        dateTime: ticket.movie_screening?.date_time,
+        seats: seatsList
+      });
+    }
+
+    return ticket;
   }
 };
