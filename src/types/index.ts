@@ -1,4 +1,4 @@
-export type TicketStatus = 'pending' | 'confirmed' | 'rejected' | string;
+export type TicketStatus = "pending" | "confirmed" | "rejected" | string;
 
 export interface Cicle {
   id?: string;
@@ -13,7 +13,7 @@ export interface Ticket {
   user_id: string;
   recipt_url?: string;
   status: TicketStatus;
-  seats?: string[];
+  seats?: string;
   created_at?: string;
   movie_screening?: MovieScreening | null;
   profiles?: Profile | null;
